@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { FieldLabel, Input, Textarea, StatusSelect, Section, Toast } from './ui'
 
@@ -21,14 +22,29 @@ const INITIAL_FORM: ProductForm = {
     cat_id: '', off_id: '', pr_status: 'ACTIVE',
 }
 
+// ─── Types for existing DB photos ─────────────────────────────────────────────
+type ExistingPhoto = {
+    id: string
+    photo_url: string
+    storage_path: string
+    is_primary: boolean
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AddProducts() {
+    const searchParams = useSearchParams()
+    const productId = searchParams.get('id')
+    const isEdit = !!productId
+
     const [form, setForm] = useState<ProductForm>(INITIAL_FORM)
     const [images, setImages] = useState<ImageFile[]>([])
+    const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([])
+    const [photosToDelete, setPhotosToDelete] = useState<string[]>([]) // storage_paths
     const [tiers, setTiers] = useState<PriceTier[]>([{ id: uid(), price: '', quantity: '' }])
     const [categories, setCategories] = useState<Category[]>([])
     const [offers, setOffers] = useState<Offer[]>([])
     const [submitting, setSubmitting] = useState(false)
+    const [loadingProduct, setLoadingProduct] = useState(isEdit)
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
     const set = (field: keyof ProductForm, val: string) =>
@@ -39,6 +55,7 @@ export default function AddProducts() {
         setTimeout(() => setToast(null), 4000)
     }
 
+    // ─── Load categories + offers ────────────────────────────────────────────
     useEffect(() => {
         supabase.from('categories').select('id, cat_name, cat_description')
             .eq('cat_status', 'ACTIVE')
@@ -49,6 +66,89 @@ export default function AddProducts() {
             .then(({ data }) => setOffers(data ?? []))
     }, [])
 
+    // ─── Load existing product when editing ──────────────────────────────────
+    useEffect(() => {
+        if (!isEdit) return
+
+        async function loadProduct() {
+            setLoadingProduct(true)
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select(`
+                        id, pr_name, pr_description, pr_sku, pr_status,
+                        cat_id, off_id,
+                        product_photos ( id, photo_url, storage_path, is_primary ),
+                        price_lists ( id, price, quantity )
+                    `)
+                    .eq('id', productId)
+                    .single()
+
+                if (error || !data) {
+                    showToast('Failed to load product', 'error')
+                    return
+                }
+
+                setForm({
+                    pr_name: data.pr_name ?? '',
+                    pr_description: data.pr_description ?? '',
+                    pr_sku: data.pr_sku ?? '',
+                    cat_id: data.cat_id ?? '',
+                    off_id: data.off_id ?? '',
+                    pr_status: data.pr_status ?? 'ACTIVE',
+                })
+
+                setExistingPhotos(
+                    (data.product_photos as ExistingPhoto[]) ?? []
+                )
+
+                const loadedTiers: PriceTier[] = (data.price_lists ?? []).map((t: PriceTier) => ({
+                    id: t.id ?? uid(),
+                    price: String(t.price),
+                    quantity: String(t.quantity),
+                }))
+                setTiers(loadedTiers.length ? loadedTiers : [{ id: uid(), price: '', quantity: '' }])
+            } finally {
+                setLoadingProduct(false)
+            }
+        }
+
+        loadProduct()
+    }, [productId, isEdit])
+
+    // ─── Remove an existing (saved) photo ────────────────────────────────────
+    const removeExistingPhoto = (photo: ExistingPhoto) => {
+        setPhotosToDelete(prev => [...prev, photo.storage_path])
+        const next = existingPhotos.filter(p => p.id !== photo.id)
+        // If we removed the primary, promote the first remaining
+        if (photo.is_primary && next.length > 0) next[0].is_primary = true
+        setExistingPhotos(next)
+    }
+
+    const setPrimaryExisting = (photoId: string) => {
+        setExistingPhotos(prev => prev.map(p => ({ ...p, is_primary: p.id === photoId })))
+        // Also unset primary on any new images
+        setImages(prev => prev.map(img => ({ ...img, isPrimary: false })))
+    }
+
+    const setPrimaryNew = (imgId: string) => {
+        setImages(prev => prev.map(img => ({ ...img, isPrimary: img.id === imgId })))
+        // Also unset primary on existing photos
+        setExistingPhotos(prev => prev.map(p => ({ ...p, is_primary: false })))
+    }
+
+    // ─── Inline image zone for existing photos ───────────────────────────────
+    // We override the onChange from ImageZone to also clear existing primaries
+    const handleNewImagesChange = (imgs: ImageFile[]) => {
+        // If a new image is being set as primary, clear existing photo primaries
+        const newPrimary = imgs.find(i => i.isPrimary)
+        if (newPrimary) {
+            setExistingPhotos(prev => prev.map(p => ({ ...p, is_primary: false })))
+        }
+        setImages(imgs)
+    }
+
+    // ─── Create category / offer ─────────────────────────────────────────────
     const handleCreateCategory = async (data: Record<string, string>) => {
         const { data: created, error } = await supabase
             .from('categories')
@@ -76,6 +176,7 @@ export default function AddProducts() {
         return { id: created.id, label: created.off_name, sub: `${created.off_discount_percentage}% off` }
     }
 
+    // ─── Submit: create or update ─────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!form.pr_name.trim()) return showToast('Product name is required', 'error')
@@ -85,55 +186,146 @@ export default function AddProducts() {
 
         setSubmitting(true)
         try {
-            const { data: product, error: productErr } = await supabase
-                .from('products')
-                .insert({
-                    pr_name: form.pr_name.trim(),
-                    pr_description: form.pr_description.trim() || null,
-                    pr_sku: form.pr_sku.trim(),
-                    cat_id: form.cat_id,
-                    off_id: form.off_id || null,
-                    pr_status: form.pr_status,
-                })
-                .select('id')
-                .single()
-            if (productErr) throw new Error(productErr.message)
+            if (isEdit) {
+                // ── UPDATE ──────────────────────────────────────────────────
+                const { error: updateErr } = await supabase
+                    .from('products')
+                    .update({
+                        pr_name: form.pr_name.trim(),
+                        pr_description: form.pr_description.trim() || null,
+                        pr_sku: form.pr_sku.trim(),
+                        cat_id: form.cat_id,
+                        off_id: form.off_id || null,
+                        pr_status: form.pr_status,
+                    })
+                    .eq('id', productId)
+                if (updateErr) throw new Error(updateErr.message)
 
-            const { error: priceErr } = await supabase.from('price_lists').insert(
-                tiers.map(t => ({
-                    product_id: product.id,
-                    price: parseFloat(t.price),
-                    quantity: parseInt(t.quantity),
-                }))
-            )
-            if (priceErr) throw new Error(priceErr.message)
+                // Delete removed photos from storage + DB
+                for (const path of photosToDelete) {
+                    await supabase.storage.from('product-photos').remove([path])
+                }
+                if (photosToDelete.length) {
+                    await supabase
+                        .from('product_photos')
+                        .delete()
+                        .in('storage_path', photosToDelete)
+                }
 
-            for (const img of images) {
-                const ext = img.file.name.split('.').pop()
-                const path = `${product.id}/${uid()}.${ext}`
-                const { error: uploadErr } = await supabase.storage
-                    .from('product-photos')
-                    .upload(path, img.file, { contentType: img.file.type })
-                if (uploadErr) throw new Error(uploadErr.message)
+                // Update is_primary on remaining existing photos
+                for (const photo of existingPhotos) {
+                    await supabase
+                        .from('product_photos')
+                        .update({ is_primary: photo.is_primary })
+                        .eq('id', photo.id)
+                }
 
-                const { data: urlData } = supabase.storage.from('product-photos').getPublicUrl(path)
-                await supabase.from('product_photos').insert({
-                    product_id: product.id,
-                    photo_url: urlData.publicUrl,
-                    storage_path: path,
-                    is_primary: img.isPrimary,
-                })
+                // Replace price tiers: delete old, insert new
+                await supabase.from('price_lists').delete().eq('product_id', productId)
+                const { error: priceErr } = await supabase.from('price_lists').insert(
+                    tiers.map(t => ({
+                        product_id: productId,
+                        price: parseFloat(t.price),
+                        quantity: parseInt(t.quantity),
+                    }))
+                )
+                if (priceErr) throw new Error(priceErr.message)
+
+                // Upload new images
+                for (const img of images) {
+                    const ext = img.file.name.split('.').pop()
+                    const path = `${productId}/${uid()}.${ext}`
+                    const { error: uploadErr } = await supabase.storage
+                        .from('product-photos')
+                        .upload(path, img.file, { contentType: img.file.type })
+                    if (uploadErr) throw new Error(uploadErr.message)
+
+                    const { data: urlData } = supabase.storage.from('product-photos').getPublicUrl(path)
+                    await supabase.from('product_photos').insert({
+                        product_id: productId,
+                        photo_url: urlData.publicUrl,
+                        storage_path: path,
+                        is_primary: img.isPrimary,
+                    })
+                }
+
+                showToast('Product updated successfully!', 'success')
+                // Small delay so toast is visible, then go back
+                setTimeout(() => window.history.back(), 1200)
+
+            } else {
+                // ── CREATE ──────────────────────────────────────────────────
+                const { data: product, error: productErr } = await supabase
+                    .from('products')
+                    .insert({
+                        pr_name: form.pr_name.trim(),
+                        pr_description: form.pr_description.trim() || null,
+                        pr_sku: form.pr_sku.trim(),
+                        cat_id: form.cat_id,
+                        off_id: form.off_id || null,
+                        pr_status: form.pr_status,
+                    })
+                    .select('id')
+                    .single()
+                if (productErr) throw new Error(productErr.message)
+
+                const { error: priceErr } = await supabase.from('price_lists').insert(
+                    tiers.map(t => ({
+                        product_id: product.id,
+                        price: parseFloat(t.price),
+                        quantity: parseInt(t.quantity),
+                    }))
+                )
+                if (priceErr) throw new Error(priceErr.message)
+
+                for (const img of images) {
+                    const ext = img.file.name.split('.').pop()
+                    const path = `${product.id}/${uid()}.${ext}`
+                    const { error: uploadErr } = await supabase.storage
+                        .from('product-photos')
+                        .upload(path, img.file, { contentType: img.file.type })
+                    if (uploadErr) throw new Error(uploadErr.message)
+
+                    const { data: urlData } = supabase.storage.from('product-photos').getPublicUrl(path)
+                    await supabase.from('product_photos').insert({
+                        product_id: product.id,
+                        photo_url: urlData.publicUrl,
+                        storage_path: path,
+                        is_primary: img.isPrimary,
+                    })
+                }
+
+                showToast('Product added successfully!', 'success')
+                setForm(INITIAL_FORM)
+                setTiers([{ id: uid(), price: '', quantity: '' }])
+                setImages([])
             }
-
-            showToast('Product added successfully!', 'success')
-            setForm(INITIAL_FORM)
-            setTiers([{ id: uid(), price: '', quantity: '' }])
-            setImages([])
         } catch (err) {
             showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')
         } finally {
             setSubmitting(false)
         }
+    }
+
+    // ─── Loading state ────────────────────────────────────────────────────────
+    if (loadingProduct) {
+        return (
+            <div style={{
+                display: 'grid', placeItems: 'center',
+                minHeight: '60vh', color: 'var(--ivory-dim)', fontSize: 14,
+            }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        border: '3px solid var(--border)',
+                        borderTopColor: 'var(--gold)',
+                        animation: 'spin 0.8s linear infinite',
+                    }} />
+                    Loading product…
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        )
     }
 
     return (
@@ -159,14 +351,17 @@ export default function AddProducts() {
                     grid-template-columns: 1fr 1fr;
                     gap: 16px;
                 }
+                .existing-photos-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+                    gap: 10px;
+                    margin-bottom: 14px;
+                }
+                @keyframes spin { to { transform: rotate(360deg); } }
                 @media (max-width: 500px) {
-                    .add-product-wrapper {
-                        padding: 16px 12px 60px;
-                    }
+                    .add-product-wrapper { padding: 16px 12px 60px; }
                     .two-col-grid,
-                    .two-col-grid-offer {
-                        grid-template-columns: 1fr !important;
-                    }
+                    .two-col-grid-offer { grid-template-columns: 1fr !important; }
                 }
             `}</style>
 
@@ -178,10 +373,12 @@ export default function AddProducts() {
                         fontSize: 'clamp(22px, 5vw, 32px)',
                         margin: 0, color: 'var(--ivory, #f5f0e8)',
                     }}>
-                        Add Product
+                        {isEdit ? 'Edit Product' : 'Add Product'}
                     </h1>
                     <p style={{ color: 'var(--ivory-dim, #9e9e9e)', marginTop: 6, fontSize: 14 }}>
-                        Fill in the details below to list a new product.
+                        {isEdit
+                            ? 'Update the details below to modify this product.'
+                            : 'Fill in the details below to list a new product.'}
                     </p>
                 </div>
 
@@ -265,20 +462,99 @@ export default function AddProducts() {
 
                     {/* Images */}
                     <Section title="Product Images">
-                        <ImageZone images={images} onChange={setImages} />
+
+                        {/* Existing saved photos (edit mode only) */}
+                        {isEdit && existingPhotos.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <p style={{ color: 'var(--ivory-dim)', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
+                                    Saved photos — click to set as primary, ✕ to remove
+                                </p>
+                                <div className="existing-photos-grid">
+                                    {existingPhotos.map(photo => (
+                                        <div
+                                            key={photo.id}
+                                            title="Click to set as primary"
+                                            onClick={() => setPrimaryExisting(photo.id)}
+                                            style={{
+                                                position: 'relative', borderRadius: 10, overflow: 'hidden',
+                                                cursor: 'pointer',
+                                                border: photo.is_primary
+                                                    ? '2px solid var(--gold)'
+                                                    : '2px solid rgba(255,255,255,0.08)',
+                                                transition: 'border-color .2s',
+                                                boxShadow: photo.is_primary ? '0 0 0 3px rgba(212,175,55,0.18)' : 'none',
+                                            }}
+                                        >
+                                            <img
+                                                src={photo.photo_url}
+                                                alt=""
+                                                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                                            />
+
+                                            {photo.is_primary && (
+                                                <div style={{
+                                                    position: 'absolute', top: 5, left: 5,
+                                                    background: 'var(--gold)', borderRadius: 4,
+                                                    padding: '2px 5px', display: 'flex', alignItems: 'center', gap: 3,
+                                                }}>
+                                                    <span style={{ fontSize: 8, fontWeight: 800, color: '#000', letterSpacing: '0.04em' }}>★ PRIMARY</span>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); removeExistingPhoto(photo) }}
+                                                style={{
+                                                    position: 'absolute', top: 5, right: 5,
+                                                    width: 20, height: 20, borderRadius: '50%', border: 'none',
+                                                    background: 'rgba(0,0,0,0.75)', cursor: 'pointer',
+                                                    display: 'grid', placeItems: 'center', backdropFilter: 'blur(4px)',
+                                                }}
+                                            >
+                                                <span style={{ fontSize: 10, color: '#fff', lineHeight: 1 }}>✕</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* New image upload zone */}
+                        <ImageZone
+                            images={images}
+                            onChange={handleNewImagesChange}
+                            // Override setPrimary to also clear existing photo primaries
+                        />
+
+                        {isEdit && (
+                            <p style={{ color: 'var(--ivory-dim)', fontSize: 11, marginTop: 8 }}>
+                                New uploads will be added alongside saved photos.
+                            </p>
+                        )}
                     </Section>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                        <button type="submit" disabled={submitting} className="btn-gold"
-                            style={{ opacity: 1, minWidth: 150 }}>
-                            {submitting ? 'Saving…' : 'Add Product'}
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="btn-gold"
+                            style={{ opacity: submitting ? 0.7 : 1, minWidth: 150 }}
+                        >
+                            {submitting
+                                ? (isEdit ? 'Saving…' : 'Adding…')
+                                : (isEdit ? 'Save Changes' : 'Add Product')}
                         </button>
-                        <button type="button" onClick={() => window.history.back()}
+                        <button
+                            type="button"
+                            onClick={() => window.history.back()}
                             style={{
-                                padding: '10px 20px', borderRadius: 10, border: '1.5px solid var(--border)',
-                                background: '', color: 'var(--ivory-dim)', cursor: 'pointer', fontSize: 14,
-                            }}>
+                                padding: '10px 20px', borderRadius: 10,
+                                border: '1.5px solid var(--border)',
+                                background: 'transparent',
+                                color: 'var(--ivory-dim)', cursor: 'pointer', fontSize: 14,
+                            }}
+                        >
                             Cancel
                         </button>
                     </div>

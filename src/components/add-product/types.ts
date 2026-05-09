@@ -9,5 +9,5 @@ export type ProductForm = {
     pr_sku: string
     cat_id: string
     off_id: string
-    pr_status: string
+    pr_status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 }

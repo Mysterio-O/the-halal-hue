@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle } from 'lucide-react'
 
 // ─── FieldLabel ───────────────────────────────────────────────────────────────
@@ -54,8 +55,6 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 // ─── StatusSelect ─────────────────────────────────────────────────────────────
-// Fully custom — no native <select> — so it matches the dark theme perfectly.
-
 const STATUS_OPTIONS = [
     { value: 'ACTIVE', label: 'Active', dot: '#4ade80' },
     { value: 'INACTIVE', label: 'Inactive', dot: '#facc15' },
@@ -67,7 +66,6 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
     const ref = useRef<HTMLDivElement>(null)
     const current = STATUS_OPTIONS.find(o => o.value === value) ?? STATUS_OPTIONS[0]
 
-    // Close on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -77,7 +75,7 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
     }, [])
 
     return (
-        <div ref={ref} style={{ position: 'relative' }}>
+        <div ref={ref} style={{ position: 'relative', zIndex: open ? 100 : 1 }}>
             {/* Trigger */}
             <button
                 type="button"
@@ -91,16 +89,12 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
                     justifyContent: 'space-between',
                 }}
             >
-                {/* Status dot */}
                 <span style={{
                     position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
                     width: 8, height: 8, borderRadius: '50%', background: current.dot,
                     flexShrink: 0,
                 }} />
-
                 <span style={{ paddingLeft: 4 }}>{current.label}</span>
-
-                {/* Chevron */}
                 <svg
                     style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
                     width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -110,16 +104,9 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
                 </svg>
             </button>
 
-            {/* Dropdown */}
+            {/* Dropdown — rendered in a portal via fixed positioning to escape any overflow:hidden ancestor */}
             {open && (
-                <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
-                    zIndex: 9999, borderRadius: 10, overflow: 'hidden',
-                    border: '1px solid var(--border)',
-                    background: 'rgba(14, 6, 6, 0.97)',
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                }}>
+                <DropdownPortal triggerRef={ref}>
                     {STATUS_OPTIONS.map(opt => (
                         <button
                             key={opt.value}
@@ -144,14 +131,12 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
                                     e.currentTarget.style.background = 'transparent'
                             }}
                         >
-                            {/* Dot */}
                             <span style={{
                                 width: 8, height: 8, borderRadius: '50%',
                                 background: opt.dot, flexShrink: 0,
                                 boxShadow: value === opt.value ? `0 0 6px ${opt.dot}` : 'none',
                             }} />
                             {opt.label}
-                            {/* Active checkmark */}
                             {value === opt.value && (
                                 <svg style={{ marginLeft: 'auto' }} width="13" height="13"
                                     viewBox="0 0 24 24" fill="none"
@@ -161,9 +146,53 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (v:
                             )}
                         </button>
                     ))}
-                </div>
+                </DropdownPortal>
             )}
         </div>
+    )
+}
+
+// ─── DropdownPortal ───────────────────────────────────────────────────────────
+// Measures the trigger's position and renders the dropdown with fixed positioning,
+// so it escapes overflow:hidden on any ancestor (e.g. Section's card-glass).
+function DropdownPortal({
+    triggerRef,
+    children,
+}: {
+    triggerRef: React.RefObject<HTMLDivElement | null>
+    children: React.ReactNode
+}) {
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null)
+
+    useEffect(() => {
+        if (!triggerRef.current) return
+        const rect = triggerRef.current.getBoundingClientRect()
+        setCoords({
+            top: rect.bottom + window.scrollY + 6,
+            left: rect.left + window.scrollX,
+            width: rect.width,
+        })
+    }, [triggerRef])
+
+    if (!coords) return null
+
+    return createPortal(
+        <div style={{
+            position: 'absolute',
+            top: coords.top,
+            left: coords.left,
+            width: coords.width,
+            zIndex: 99999,
+            borderRadius: 10,
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+            background: 'rgba(14, 6, 6, 0.97)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+        }}>
+            {children}
+        </div>,
+        document.body
     )
 }
 
@@ -175,8 +204,8 @@ export function Section({ title, children }: { title: string; children: React.Re
             style={{
                 padding: '20px 20px 22px',
                 borderRadius: 14,
-                overflow: 'hidden',   // ← prevents any child from bleeding out
-                minWidth: 0,          // ← lets the card shrink below its content's natural width
+                overflow: 'visible',  // ← was 'hidden'; changed so dropdowns aren't clipped
+                minWidth: 0,
             }}
         >
             <h2 style={{
