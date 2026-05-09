@@ -1,27 +1,23 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 
-export function createMiddlewareSupabase(request: NextRequest) {
-    const response = NextResponse.next({
-        request: { headers: request.headers },
-    });
+export async function createRouteSupabase() {
+    const cookieStore = await cookies();
 
-    const supabase = createServerClient(
+    return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
         {
             cookies: {
                 getAll() {
-                    return request.cookies.getAll();
+                    return cookieStore.getAll();
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) => {
-                        response.cookies.set(name, value, options);
+                        cookieStore.set(name, value, options);
                     });
                 },
             },
         }
     );
-
-    return { supabase, response };
 }

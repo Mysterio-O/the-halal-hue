@@ -5,6 +5,7 @@ import '@fontsource-variable/cormorant'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import type { Metadata } from 'next'
+import { AuthProvider } from '@/lib/auth/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'The Halal Hue — Luxury Halal Perfumes',
@@ -23,11 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           overscrollBehavior: 'none',
         }}
       >
-        <Navbar />
-        <main style={{ paddingTop: 'var(--nav-height)' }}>
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main style={{ paddingTop: 'var(--nav-height)' }}>
+            {children}
+          </main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   )
