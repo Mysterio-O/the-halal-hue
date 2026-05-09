@@ -1,20 +1,22 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createClient as createBrowserSupabase } from "@/utils/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-type User = any | null;
+export type AppRole = "SUPER_ADMIN" | "ADMIN" | "MANAGER";
+type User = SupabaseUser | null;
 type Profile = {
   id?: string;
   user_id?: string;
   full_name?: string;
   email?: string;
-  user_role?: string;
+  user_role?: AppRole;
 };
 
 type AuthContextValue = {
   user: User;
   profile: Profile | null;
-  role: string | null;
+  role: AppRole | null;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isManager: boolean;
@@ -29,11 +31,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [supabase] = useState(() => createBrowserSupabase());
   const [user, setUser] = useState<User>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe: (() => void) | undefined;
 
     async function fetchProfile(userId: string | undefined) {
       if (!userId) {
@@ -54,8 +57,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setProfile(null);
           setRole(null);
         } else {
-          setProfile(data as Profile);
-          setRole((data as Profile)?.user_role ?? null);
+          const typedProfile = data as Profile;
+          setProfile(typedProfile);
+          setRole(typedProfile?.user_role ?? null);
         }
       } catch {
         setProfile(null);
@@ -73,22 +77,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await fetchProfile(session?.user?.id);
       setLoading(false);
 
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         setUser(session?.user ?? null);
         // fetch profile for new user or clear on sign out
         fetchProfile(session?.user?.id);
       });
 
-      return () => {
-        mounted = false;
-        data.subscription.unsubscribe();
-      };
+      unsubscribe = () => data.subscription.unsubscribe();
     }
 
-    const unsub = init();
+    void init();
+
     return () => {
-      // ensure cleanup if init returned a cleanup
-      if (typeof (unsub as any) === "function") (unsub as any)();
+      mounted = false;
+      unsubscribe?.();
     };
   }, [supabase]);
 
