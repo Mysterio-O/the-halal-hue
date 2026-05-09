@@ -613,3 +613,11 @@ a:focus-visible {
   animation: ornament-reveal 1.2s ease-out forwards;
   user-select: none;
 }
+
+@media (max-width: 520px) {
+
+  /* Any direct 2-col grid inside a Section card collapses to 1 col */
+  .card-glass .two-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
