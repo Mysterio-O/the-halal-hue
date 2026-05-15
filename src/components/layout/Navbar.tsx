@@ -8,6 +8,7 @@ import HalalBadge from '../ui/HalalBadge'
 import DesktopNav from './ControlledNav/DesktopNav'
 import { useRouter } from 'next/navigation'
 import MobileNav from './ControlledNav/MobileNav'
+import useAuth from '../../hooks/useAuth'
 
 const SECTIONS = ['home', 'perfumes', 'about', 'contact'] as const
 
@@ -17,6 +18,8 @@ export default function Navbar() {
   const { scrollTo } = useSmoothScroll()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const { user, loading, signOut } = useAuth()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -38,6 +41,20 @@ export default function Navbar() {
     }
     setOpen(false)
   }
+
+  const handleLogout = async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await signOut()
+      router.push('/login')
+    } finally {
+      setLoggingOut(false)
+      setOpen(false)
+    }
+  }
+
+  const showLogout = !loading && !!user
 
   return (
     <>
@@ -98,7 +115,13 @@ export default function Navbar() {
           </button>
 
           {/* Desktop nav */}
-          <DesktopNav active={active} handleNav={handleNav} />
+          <DesktopNav
+            active={active}
+            handleNav={handleNav}
+            onLogout={handleLogout}
+            showLogout={showLogout}
+            loggingOut={loggingOut}
+          />
 
           {/* Mobile hamburger */}
           <button
@@ -200,7 +223,13 @@ export default function Navbar() {
                 />
               </div>
 
-            <MobileNav active={active} handleNav={handleNav} />
+            <MobileNav
+              active={active}
+              handleNav={handleNav}
+              onLogout={handleLogout}
+              showLogout={showLogout}
+              loggingOut={loggingOut}
+            />
 
               <div style={{ padding: '4px 28px 8px', textAlign: 'center' }}>
                 <HalalBadge size="sm" />

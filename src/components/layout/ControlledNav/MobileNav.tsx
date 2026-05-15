@@ -5,7 +5,19 @@ import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
 import React from 'react'
 
-export default function MobileNav({ active, handleNav }: { active: string | null, handleNav: (id: string, href?: string) => void }) {
+export default function MobileNav({
+    active,
+    handleNav,
+    onLogout,
+    showLogout = false,
+    loggingOut = false,
+}: {
+    active: string | null
+    handleNav: (id: string, href?: string) => void
+    onLogout?: () => void
+    showLogout?: boolean
+    loggingOut?: boolean
+}) {
 
     let NAV_LINKS = HOME_NAV;
 
@@ -62,6 +74,35 @@ export default function MobileNav({ active, handleNav }: { active: string | null
                     </motion.button>
                 )
             })}
+            {showLogout && onLogout && (
+                <motion.button
+                    key="logout"
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: NAV_LINKS.length * 0.06 + 0.12 }}
+                    onClick={onLogout}
+                    disabled={loggingOut}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        padding: '16px 28px',
+                        background: 'linear-gradient(135deg, rgba(200,168,75,0.12), rgba(61,10,10,0.85))',
+                        border: '1px solid var(--border-strong)',
+                        cursor: loggingOut ? 'default' : 'pointer',
+                        textAlign: 'left',
+                        color: 'var(--gold-light)',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '0.85rem',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        opacity: loggingOut ? 0.6 : 1,
+                        gap: 12,
+                    }}
+                >
+                    {loggingOut ? 'Signing out...' : 'Logout'}
+                </motion.button>
+            )}
         </div>
     )
 }

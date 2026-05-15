@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { MoreVertical, Pencil, Trash2, ToggleLeft } from 'lucide-react'
+import { Eye, MoreVertical, Pencil, Trash2, ToggleLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
 type FilterStatus = 'ALL' | ProductStatus
+type SelectOption = { value: string; label: string }
 
 type Product = {
     id: string
@@ -38,6 +39,143 @@ const getLowestPrice = (pl: { price: number }[]) =>
 
 const getPrimaryPhoto = (photos: { photo_url: string; is_primary: boolean }[]) =>
     photos.find(p => p.is_primary)?.photo_url ?? photos[0]?.photo_url ?? null
+
+// ─── Themed Select ───────────────────────────────────────────────────────────
+function ThemedSelect({
+    value,
+    options,
+    onChange,
+    ariaLabel,
+}: {
+    value: string
+    options: SelectOption[]
+    onChange: (value: string) => void
+    ariaLabel: string
+}) {
+    const [open, setOpen] = useState(false)
+    const [focused, setFocused] = useState(false)
+    const ref = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    const selected = options.find(opt => opt.value === value) ?? options[0]
+    const isActive = open || focused
+
+    const buttonStyle: React.CSSProperties = {
+        padding: '9px 38px 9px 12px',
+        borderRadius: 12,
+        border: `1.5px solid ${isActive ? 'var(--gold)' : 'var(--border-strong)'}`,
+        background: 'linear-gradient(135deg, rgba(107,15,15,0.55), rgba(61,10,10,0.78))',
+        color: 'var(--ivory)',
+        fontSize: 12.5,
+        outline: 'none',
+        cursor: 'pointer',
+        boxSizing: 'border-box',
+        width: '100%',
+        height: 40,
+        lineHeight: '20px',
+        fontFamily: 'var(--font-display)',
+        letterSpacing: '0.06em',
+        boxShadow: isActive
+            ? '0 0 0 1px rgba(200,168,75,0.35)'
+            : 'inset 0 0 0 1px rgba(200,168,75,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        transition: 'border-color .2s ease, box-shadow .2s ease, background .2s ease',
+    }
+
+    return (
+        <div ref={ref} className="filter-select" style={{ position: 'relative' }}>
+            <button
+                type="button"
+                aria-label={ariaLabel}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                onClick={() => setOpen(o => !o)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={buttonStyle}
+            >
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selected?.label ?? ''}
+                </span>
+                <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center' }}>
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 8l4 4 4-4" />
+                    </svg>
+                </span>
+            </button>
+
+            {open && (
+                <div
+                    role="listbox"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 50,
+                        borderRadius: 12,
+                        border: '1px solid var(--border-strong)',
+                        background: 'rgba(12,4,4,0.98)',
+                        boxShadow: '0 18px 48px rgba(0,0,0,0.6)',
+                        overflow: 'hidden',
+                        maxHeight: 240,
+                        overflowY: 'auto',
+                    }}
+                >
+                    {options.map(opt => {
+                        const isSelected = opt.value === value
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                    onChange(opt.value)
+                                    setOpen(false)
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: 'none',
+                                    background: isSelected
+                                        ? 'linear-gradient(90deg, rgba(200,168,75,0.18), rgba(61,10,10,0.2))'
+                                        : 'transparent',
+                                    color: isSelected ? 'var(--gold-light)' : 'var(--ivory)',
+                                    fontSize: 12.5,
+                                    fontFamily: 'var(--font-display)',
+                                    letterSpacing: '0.06em',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    borderLeft: isSelected ? '3px solid var(--gold)' : '3px solid transparent',
+                                    transition: 'background .15s ease, color .15s ease',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isSelected) e.currentTarget.style.background = 'rgba(200,168,75,0.08)'
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isSelected) e.currentTarget.style.background = 'transparent'
+                                }}
+                            >
+                                {opt.label}
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
+}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -116,6 +254,11 @@ function CardMenu({ product, onStatusChange, onDelete }: {
                     background: 'rgba(10,4,4,0.97)', backdropFilter: 'blur(16px)',
                     boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
                 }}>
+                    {menuItem(
+                        <Eye size={13} />,
+                        'View Details',
+                        () => router.push(`/admin/products/${product.id}`)
+                    )}
                     {menuItem(
                         <Pencil size={13} />,
                         'Edit Product',
@@ -386,14 +529,24 @@ export default function Products() {
             return 0
         })
 
-    const selectStyle: React.CSSProperties = {
-        padding: '9px 12px', borderRadius: 10,
-        border: '1.5px solid var(--border)',
-        background: 'rgba(255,255,255,0.04)',
-        color: 'var(--ivory)', fontSize: 13, outline: 'none',
-        appearance: 'none', cursor: 'pointer',
-        boxSizing: 'border-box', width: '100%',
-    }
+    const statusOptions: SelectOption[] = [
+        { value: 'ALL', label: 'All Statuses' },
+        { value: 'ACTIVE', label: 'Active' },
+        { value: 'INACTIVE', label: 'Inactive' },
+        { value: 'ARCHIVED', label: 'Archived' },
+    ]
+
+    const categoryOptions: SelectOption[] = [
+        { value: '', label: 'All Categories' },
+        ...categories.map(c => ({ value: c.id, label: c.cat_name })),
+    ]
+
+    const sortOptions: SelectOption[] = [
+        { value: 'newest', label: 'Newest' },
+        { value: 'oldest', label: 'Oldest' },
+        { value: 'name', label: 'Name A-Z' },
+        { value: 'price', label: 'Price Asc' },
+    ]
 
     return (
         <>
@@ -472,30 +625,26 @@ export default function Products() {
                         onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
                     />
 
-                    <select className="filter-select" value={filterStatus}
-                        onChange={e => setFilterStatus(e.target.value as FilterStatus)}
-                        style={selectStyle}>
-                        <option value="ALL">All Statuses</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                        <option value="ARCHIVED">Archived</option>
-                    </select>
+                    <ThemedSelect
+                        ariaLabel="Filter by status"
+                        value={filterStatus}
+                        options={statusOptions}
+                        onChange={value => setFilterStatus(value as FilterStatus)}
+                    />
 
-                    <select className="filter-select" value={filterCat}
-                        onChange={e => setFilterCat(e.target.value)}
-                        style={selectStyle}>
-                        <option value="">All Categories</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.cat_name}</option>)}
-                    </select>
+                    <ThemedSelect
+                        ariaLabel="Filter by category"
+                        value={filterCat}
+                        options={categoryOptions}
+                        onChange={setFilterCat}
+                    />
 
-                    <select className="filter-select" value={sortBy}
-                        onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                        style={selectStyle}>
-                        <option value="newest">Newest</option>
-                        <option value="oldest">Oldest</option>
-                        <option value="name">Name A→Z</option>
-                        <option value="price">Price ↑</option>
-                    </select>
+                    <ThemedSelect
+                        ariaLabel="Sort products"
+                        value={sortBy}
+                        options={sortOptions}
+                        onChange={value => setSortBy(value as typeof sortBy)}
+                    />
                 </div>
 
                 {/* Grid */}
