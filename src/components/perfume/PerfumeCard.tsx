@@ -25,13 +25,13 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
     finalPrice < selectedPrice.price;
 
   return (
-    <div className="card-glass card-glow-hover flex flex-col overflow-hidden group">
+    <div className="card-glass card-glow-hover flex flex-col overflow-hidden group min-w-0 w-full h-full">
 
       {/* ── Image — compact square-ish ratio ── */}
       <Link
         href={`/perfumes/${product.id}`}
-        className="relative block overflow-hidden bg-[var(--crimson-deep)]"
-        style={{ aspectRatio: '1 / 1.15' }}
+        className="relative block w-full overflow-hidden bg-[var(--crimson-deep)]"
+        style={{ aspectRatio: '1 / 1.15', position: 'relative' }}
         tabIndex={-1}
         aria-hidden
       >
@@ -80,12 +80,12 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
       </Link>
 
       {/* ── Body ── */}
-      <div className="flex flex-col gap-1 p-2 flex-1">
+      <div className="flex flex-col gap-1 p-2 flex-1 w-full min-w-0" style={{paddingLeft:'10px', paddingRight:'10px', paddingBottom:'12px'}}>
 
         {/* Category */}
         {product.categories && (
           <span
-            className="truncate"
+            className="truncate w-full block"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '0.55rem',
@@ -99,7 +99,7 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
         )}
 
         {/* Name */}
-        <Link href={`/perfumes/${product.id}`}>
+        <Link href={`/perfumes/${product.id}`} className="block w-full min-w-0">
           <h3
             className="line-clamp-2 leading-snug hover:text-[var(--gold-light)] transition-colors duration-200"
             style={{
@@ -115,7 +115,7 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
 
         {/* Size pills — tiny */}
         {product.sortedPrices.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-0.5">
+          <div className="flex flex-wrap gap-1 mt-0.5 w-full">
             {product.sortedPrices.map((pl) => (
               <button
                 key={pl.id}
@@ -130,8 +130,8 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
         )}
 
         {/* Price row */}
-        <div className="mt-auto pt-1.5 flex items-center justify-between gap-1">
-          <div className="flex items-baseline gap-1">
+        <div className="mt-auto pt-1.5 flex items-center justify-between gap-1 w-full min-w-0">
+          <div className="flex items-baseline gap-1 min-w-0 truncate">
             {finalPrice !== null && (
               <span
                 className="text-gold-gradient"
@@ -146,6 +146,7 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
             )}
             {hasDiscount && selectedPrice && (
               <span
+                className="truncate"
                 style={{
                   fontSize: '0.62rem',
                   color: 'var(--gold-muted)',
@@ -160,7 +161,7 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
 
           <Link
             href={`/perfumes/${product.id}`}
-            className="btn-gold"
+            className="btn-gold shrink-0"
             style={{ padding: '4px 10px', fontSize: '0.58rem', borderRadius: '7px', gap: '4px' }}
           >
             <span>View</span>

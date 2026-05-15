@@ -1,9 +1,9 @@
 
 export const NAV_LINKS: { label: string; href: string }[] = [
-  { label: 'Home', href: '#home' },
-  { label: 'Perfumes', href: '#perfumes' },
-  { label: 'About', href: '#about' },
-  { label: 'Contact', href: '#contact' }
+  { label: 'Home', href: '/#home' },
+  { label: 'Perfumes', href: '/#perfumes' },
+  { label: 'About', href: '/#about' },
+  { label: 'Contact', href: '/#contact' }
 ];
 
 export const ADMIN_NAV_LINKS: { label: string; href: string }[] = [

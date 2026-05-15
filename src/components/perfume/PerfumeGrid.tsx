@@ -9,9 +9,9 @@ interface PerfumeGridProps {
 
 function SkeletonCard() {
   return (
-    <div className="card-glass flex flex-col overflow-hidden">
-      <div className="aspect-[3/4] shimmer" />
-      <div className="p-2.5 flex flex-col gap-2">
+    <div className="card-glass flex flex-col overflow-hidden w-full min-w-0">
+      <div className="aspect-[3/4] shimmer w-full" />
+      <div className="p-2.5 flex flex-col gap-2 w-full">
         <div className="shimmer h-2.5 w-16 rounded" />
         <div className="shimmer h-3.5 w-full rounded" />
         <div className="shimmer h-3 w-3/4 rounded" />
@@ -31,7 +31,7 @@ function SkeletonCard() {
 export default function PerfumeGrid({ products, isLoading = false }: PerfumeGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 !gap-x-3 !gap-y-3 w-full">
         {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -41,7 +41,7 @@ export default function PerfumeGrid({ products, isLoading = false }: PerfumeGrid
 
   if (!products.length) {
     return (
-      <div className="text-center py-20">
+      <div className="text-center py-20 w-full">
         <p
           style={{
             fontFamily: 'var(--font-display)',
@@ -57,7 +57,7 @@ export default function PerfumeGrid({ products, isLoading = false }: PerfumeGrid
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 !gap-x-3 !gap-y-3 w-full" style={{gap:'12px'}}>
       {products.map((product) => (
         <PerfumeCard key={product.id} product={product} />
       ))}

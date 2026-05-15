@@ -56,7 +56,7 @@ export default function ProductDetailClient({ product }: Props) {
                     .detail-wrapper {
                         position: relative;
                         z-index: 1;
-                        padding: calc(var(--nav-height) + 28px) 0 84px;
+                        // padding: calc(var(--nav-height)) 0 0px;
                     }
                     .detail-grid {
                         display: grid;
@@ -64,8 +64,8 @@ export default function ProductDetailClient({ product }: Props) {
                         grid-template-columns: 1.08fr 1fr;
                     }
                     .detail-card {
-                        border-radius: 16px;
-                        border: 1px solid var(--border);
+                        // border-radius: 16px;
+                        // border: 1px solid var(--border);
                         background: linear-gradient(135deg, rgba(107,15,15,0.38), rgba(61,10,10,0.7));
                         padding: 16px;
                     }

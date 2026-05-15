@@ -621,3 +621,7 @@ a:focus-visible {
     grid-template-columns: 1fr !important;
   }
 }
+
+.perfume-grid-layout {
+  gap: 12px !important; /* Forces 12px gap (the equivalent of Tailwind's gap-3) */
+}

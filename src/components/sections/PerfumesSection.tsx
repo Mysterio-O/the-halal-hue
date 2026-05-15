@@ -13,7 +13,7 @@ export default async function PerfumesSection() {
       <div className="max-w-5xl mx-auto px-6">
         <SectionHeading
           eyebrow="Our Collection"
-          title="Live Perfume Prices"
+          title="Our Perfume Collections"
           subtitle="Authentic halal fragrances, updated regularly"
           align="center"
         />
@@ -35,7 +35,7 @@ export default async function PerfumesSection() {
         </div>
 
         {/* ── View All button ── */}
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex justify-center" style={{marginTop:'20px'}}>
           <Link href="/products" className="btn-gold">
             <span>View All Fragrances</span>
             <span style={{ fontSize: '0.9em' }}>→</span>

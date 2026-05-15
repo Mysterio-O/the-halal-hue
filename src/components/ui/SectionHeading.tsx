@@ -1,5 +1,6 @@
 import React from 'react'
 import GoldDivider from './GoldDivider'
+import { cn } from '@/lib/utils'
 
 interface SectionHeadingProps {
   eyebrow?: string
@@ -17,7 +18,7 @@ export default function SectionHeading({
   const isCenter = align === 'center'
 
   return (
-    <div className={isCenter ? 'text-center' : 'text-left'}>
+    <div className={cn(isCenter ? 'text-center' : 'text-left')}>
       {eyebrow && (
         <p
           style={{
@@ -27,6 +28,7 @@ export default function SectionHeading({
             textTransform: 'uppercase',
             color: 'var(--gold-muted)',
             marginBottom: '0.75rem',
+            paddingTop:'10px'
           }}
         >
           {eyebrow}
