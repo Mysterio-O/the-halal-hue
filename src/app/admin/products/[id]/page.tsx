@@ -94,7 +94,7 @@ export default async function ProductDetailsPage({
 
     if (error || !data) redirect('/admin/products')
 
-    const product = data as ProductDetails
+    const product = data as unknown as ProductDetails;
     const status = STATUS_CONFIG[product.pr_status]
     const photos = product.product_photos ?? []
     const primaryPhoto = photos.find(p => p.is_primary)?.photo_url ?? photos[0]?.photo_url ?? null
