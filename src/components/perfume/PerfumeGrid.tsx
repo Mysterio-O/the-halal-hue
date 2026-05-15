@@ -1,116 +1,66 @@
-"use client"
-import React, { useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
-import CategoryFilter from './CategoryFilter'
-import PerfumeCard from './PerfumeCard'
-import type { Perfume, PerfumeCategory } from '../../types/perfume'
+import React from 'react';
+import PerfumeCard from './PerfumeCard';
+import { ProductWithDerived } from '@/types/product';
 
 interface PerfumeGridProps {
-  perfumes: Perfume[]
-  isLoading: boolean
-  lastUpdated: Date | null
+  products: ProductWithDerived[];
+  isLoading?: boolean;
 }
 
 function SkeletonCard() {
   return (
-    <div
-      className="shimmer"
-      style={{
-        borderRadius: 20,
-        height: 420,
-        border: '1px solid var(--border)',
-      }}
-    />
-  )
+    <div className="card-glass flex flex-col overflow-hidden">
+      <div className="aspect-[3/4] shimmer" />
+      <div className="p-2.5 flex flex-col gap-2">
+        <div className="shimmer h-2.5 w-16 rounded" />
+        <div className="shimmer h-3.5 w-full rounded" />
+        <div className="shimmer h-3 w-3/4 rounded" />
+        <div className="flex gap-1 mt-1">
+          <div className="shimmer h-5 w-10 rounded-full" />
+          <div className="shimmer h-5 w-10 rounded-full" />
+        </div>
+        <div className="mt-2 flex justify-between items-center">
+          <div className="shimmer h-4 w-12 rounded" />
+          <div className="shimmer h-6 w-14 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default function PerfumeGrid({ perfumes, isLoading }: PerfumeGridProps) {
-  const [activeCategory, setActiveCategory] = useState<PerfumeCategory | 'All'>('All')
-
-  const categories = useMemo(
-    () => Array.from(new Set(perfumes.map((p) => p.category))) as PerfumeCategory[],
-    [perfumes]
-  )
-
-  const filtered =
-    activeCategory === 'All'
-      ? perfumes
-      : perfumes.filter((p) => p.category === activeCategory)
-
+export default function PerfumeGrid({ products, isLoading = false }: PerfumeGridProps) {
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
       </div>
-    )
+    );
   }
 
-  if (!filtered.length) {
+  if (!products.length) {
     return (
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '4rem 0',
-          color: 'var(--gold-muted)',
-          fontStyle: 'italic',
-          fontFamily: 'var(--font-body)',
-          fontSize: '1.1rem',
-        }}
-      >
-        No perfumes found in this category.
+      <div className="text-center py-20">
+        <p
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.85rem',
+            color: 'var(--gold-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
+          NO PRODUCTS AVAILABLE
+        </p>
       </div>
-    )
+    );
   }
 
   return (
-    <div>
-      <CategoryFilter
-        categories={categories}
-        active={activeCategory}
-        onChange={(c) => setActiveCategory(c as PerfumeCategory | 'All')}
-      />
-
-      <motion.div
-        layout
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.25rem',
-          marginTop: '1.5rem',
-        }}
-      >
-        <AnimatePresence mode="popLayout">
-          {filtered.map((p, idx) => (
-            <motion.div
-              key={p.id}
-              layout
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                transition: { delay: idx * 0.045, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-              }}
-              exit={{
-                opacity: 0,
-                scale: 0.94,
-                transition: { duration: 0.18 },
-              }}
-              style={{ height: '100%' }}
-            >
-              <PerfumeCard perfume={p} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      {products.map((product) => (
+        <PerfumeCard key={product.id} product={product} />
+      ))}
     </div>
-  )
+  );
 }

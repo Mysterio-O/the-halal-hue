@@ -1,56 +1,56 @@
-"use client"
-import React from 'react'
-import { motion } from 'motion/react'
-import type { PerfumeCategory } from '../../types/perfume'
-import { cn } from '@/lib/utils'
+'use client';
 
-interface CategoryFilterProps {
-  categories: PerfumeCategory[]
-  active: PerfumeCategory | 'All'
-  onChange: (c: PerfumeCategory | 'All') => void
+import React from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+
+interface Category {
+  id: string;
+  cat_name: string;
 }
 
-const CATEGORY_ICONS: Record<PerfumeCategory | 'All', string> = {
-  All: '✦',
-  Oud: '🪵',
-  Floral: '🌹',
-  Woody: '🌲',
-  Oriental: '🌙',
-  Fresh: '💨',
-  Citrus: '🍊',
+interface Props {
+  categories: Category[];
+  activeCatId?: string;
 }
 
-export default function CategoryFilter({ categories, active, onChange }: CategoryFilterProps) {
-  const pills = ['All', ...Array.from(new Set(categories))] as (PerfumeCategory | 'All')[]
+export default function CategoryFilters({ categories, activeCatId }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  if (!categories.length) return null;
+
+  function navigate(catId?: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    // Reset to page 1 on filter change
+    params.delete('page');
+    if (catId) {
+      params.set('cat', catId);
+    } else {
+      params.delete('cat');
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
-    <div
-      className="scrollbar-hide"
-      style={{ overflowX: 'auto', paddingBottom: 4 }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          padding: '4px 2px',
-          width: 'max-content',
-          minWidth: '100%',
-        }}
+    <div className="flex gap-2 flex-wrap">
+      {/* "All" pill */}
+      <button
+        onClick={() => navigate(undefined)}
+        className={`cat-pill ${!activeCatId ? 'active' : ''}`}
       >
-        {pills.map((p) => {
-          const isActive = p === active
-          return (
-            <button
-              key={p}
-              aria-pressed={isActive}
-              onClick={() => onChange(p)}
-              className={cn('cat-pill', isActive && 'active')}
-            >
-              {CATEGORY_ICONS[p]} {p}
-            </button>
-          )
-        })}
-      </div>
+        All
+      </button>
+
+      {categories.map((cat) => (
+        <button
+          key={cat.id}
+          onClick={() => navigate(cat.id)}
+          className={`cat-pill ${activeCatId === cat.id ? 'active' : ''}`}
+        >
+          {cat.cat_name}
+        </button>
+      ))}
     </div>
-  )
+  );
 }
