@@ -2,35 +2,35 @@ import { createServerSupabase } from '@/utils/supabase/server';
 import { Product, ProductWithDerived } from '@/types/product';
 
 function deriveProduct(product: Product): ProductWithDerived {
-    const primaryPhoto =
-        product.product_photos.find((p) => p.is_primary) ??
-        product.product_photos[0] ??
-        null;
+  const primaryPhoto =
+    product.product_photos.find((p) => p.is_primary) ??
+    product.product_photos[0] ??
+    null;
 
-    const sortedPrices = [...product.price_lists].sort(
-        (a, b) => a.quantity - b.quantity
-    );
+  const sortedPrices = [...product.price_lists].sort(
+    (a, b) => a.quantity - b.quantity
+  );
 
-    const lowestPrice = sortedPrices[0] ?? null;
+  const lowestPrice = sortedPrices[0] ?? null;
 
-    const isOnOffer =
-        !!product.offers &&
-        product.offers.off_status === 'ACTIVE' &&
-        !!product.offers.off_discount_percentage;
+  const isOnOffer =
+    !!product.offers &&
+    product.offers.off_status === 'ACTIVE' &&
+    !!product.offers.off_discount_percentage;
 
-    const discountPct =
-        isOnOffer && product.offers?.off_discount_percentage
-            ? product.offers.off_discount_percentage
-            : null;
+  const discountPct =
+    isOnOffer && product.offers?.off_discount_percentage
+      ? product.offers.off_discount_percentage
+      : null;
 
-    return {
-        ...product,
-        primaryPhoto,
-        sortedPrices,
-        lowestPrice,
-        discountPct,
-        isOnOffer,
-    };
+  return {
+    ...product,
+    primaryPhoto,
+    sortedPrices,
+    lowestPrice,
+    discountPct,
+    isOnOffer,
+  };
 }
 
 const PRODUCT_SELECT = `
@@ -49,113 +49,113 @@ const PRODUCT_SELECT = `
   product_photos ( id, product_id, photo_url, storage_path, is_primary, created_at, updated_at )
 `;
 
-/** Homepage: latest 8 active products, no filters */
+/** Homepage: latest 8 active products */
 export async function getFeaturedProducts(): Promise<ProductWithDerived[]> {
-    const supabase = await createServerSupabase();
+  const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
-        .from('products')
-        .select(PRODUCT_SELECT)
-        .eq('pr_status', 'ACTIVE')
-        .order('created_at', { ascending: false })
-        .limit(8);
+  const { data, error } = await supabase
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('pr_status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(8);
 
-    if (error) {
-        console.error('[getFeaturedProducts]', error.message);
-        return [];
-    }
+  if (error) {
+    console.error('[getFeaturedProducts]', error.message);
+    return [];
+  }
 
-    return (data as unknown as Product[]).map(deriveProduct);
+  return (data as unknown as Product[]).map(deriveProduct);
 }
 
 export interface GetProductsOptions {
-    page?: number;       // 1-indexed, default 1
-    perPage?: number;    // default 16
-    catId?: string;      // filter by category uuid
+  page?: number;
+  perPage?: number;
+  catId?: string;
+  offerId?: string; // filter by offer uuid (?offer=)
 }
 
 export interface GetProductsResult {
-    products: ProductWithDerived[];
-    total: number;
-    page: number;
-    perPage: number;
-    totalPages: number;
+  products: ProductWithDerived[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
 }
 
-/** /products page: paginated + optional category filter */
+/** /products page: paginated + optional category/offer filter */
 export async function getProducts(
-    opts: GetProductsOptions = {}
+  opts: GetProductsOptions = {}
 ): Promise<GetProductsResult> {
-    const { page = 1, perPage = 16, catId } = opts;
-    const supabase = await createServerSupabase();
+  const { page = 1, perPage = 16, catId, offerId } = opts;
+  const supabase = await createServerSupabase();
 
-    const from = (page - 1) * perPage;
-    const to = from + perPage - 1;
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
 
-    let query = supabase
-        .from('products')
-        .select(PRODUCT_SELECT, { count: 'exact' })
-        .eq('pr_status', 'ACTIVE')
-        .order('created_at', { ascending: false })
-        .range(from, to);
+  let query = supabase
+    .from('products')
+    .select(PRODUCT_SELECT, { count: 'exact' })
+    .eq('pr_status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
-    if (catId) {
-        query = query.eq('cat_id', catId);
-    }
+  if (catId)    query = query.eq('cat_id', catId);
+  if (offerId)  query = query.eq('off_id', offerId);
 
-    const { data, error, count } = await query;
+  const { data, error, count } = await query;
 
-    if (error) {
-        console.error('[getProducts]', error.message);
-        return { products: [], total: 0, page, perPage, totalPages: 0 };
-    }
+  if (error) {
+    console.error('[getProducts]', error.message);
+    return { products: [], total: 0, page, perPage, totalPages: 0 };
+  }
 
-    const total = count ?? 0;
-    const totalPages = Math.ceil(total / perPage);
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / perPage);
 
-    return {
-        products: (data as unknown as Product[]).map(deriveProduct),
-        total,
-        page,
-        perPage,
-        totalPages,
-    };
+  return {
+    products: (data as unknown as Product[]).map(deriveProduct),
+    total,
+    page,
+    perPage,
+    totalPages,
+  };
 }
 
 export async function getProductById(
-    id: string
+  id: string
 ): Promise<ProductWithDerived | null> {
-    const supabase = await createServerSupabase();
+  const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
-        .from('products')
-        .select(PRODUCT_SELECT)
-        .eq('id', id)
-        .eq('pr_status', 'ACTIVE')
-        .single();
+  const { data, error } = await supabase
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('id', id)
+    .eq('pr_status', 'ACTIVE')
+    .single();
 
-    if (error) {
-        console.error('[getProductById]', error.message);
-        return null;
-    }
+  if (error) {
+    console.error('[getProductById]', error.message);
+    return null;
+  }
 
-    return deriveProduct(data as unknown as Product);
+  return deriveProduct(data as unknown as Product);
 }
 
-/** Fetch all active products — use sparingly, no pagination */
+/** All active products — use sparingly (generateStaticParams, etc.) */
 export async function getActiveProducts(): Promise<ProductWithDerived[]> {
-    const supabase = await createServerSupabase();
+  const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
-        .from('products')
-        .select(PRODUCT_SELECT)
-        .eq('pr_status', 'ACTIVE')
-        .order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('pr_status', 'ACTIVE')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('[getActiveProducts]', error.message);
-        return [];
-    }
+  if (error) {
+    console.error('[getActiveProducts]', error.message);
+    return [];
+  }
 
-    return (data as unknown as Product[]).map(deriveProduct);
+  return (data as unknown as Product[]).map(deriveProduct);
 }

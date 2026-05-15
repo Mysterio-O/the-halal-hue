@@ -1,16 +1,10 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { getProductById, getActiveProducts } from '@/lib/queries/products';
+import { getProductById } from '@/lib/queries/products';
 import ProductDetailClient from './ProductDetailClient';
 
 interface Props {
     params: Promise<{ id: string }>;
-}
-
-// Generate static params for all active products at build time
-export async function generateStaticParams() {
-    const products = await getActiveProducts();
-    return products.map((p) => ({ id: p.id }));
 }
 
 export async function generateMetadata({ params }: Props) {
