@@ -5,11 +5,14 @@ import useScrollSpy from '../../hooks/useScrollSpy'
 import useSmoothScroll from '../../hooks/useSmoothScroll'
 import { BRAND_NAME, NAV_LINKS } from '../../lib/constants'
 import HalalBadge from '../ui/HalalBadge'
-import { cn } from '../../lib/utils'
+import DesktopNav from './ControlledNav/DesktopNav'
+import { useRouter } from 'next/navigation'
+import MobileNav from './ControlledNav/MobileNav'
 
 const SECTIONS = ['home', 'perfumes', 'about', 'contact'] as const
 
 export default function Navbar() {
+  const router = useRouter()
   const active = useScrollSpy([...SECTIONS])
   const { scrollTo } = useSmoothScroll()
   const [open, setOpen] = useState(false)
@@ -27,8 +30,12 @@ export default function Navbar() {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  const handleNav = (id: string) => {
-    scrollTo(id)
+  const handleNav = (id: string, href?: string) => {
+    if (href?.startsWith('/')) {
+      router.push(href)
+    } else {
+      scrollTo(id)
+    }
     setOpen(false)
   }
 
@@ -91,37 +98,7 @@ export default function Navbar() {
           </button>
 
           {/* Desktop nav */}
-          <nav
-            className="hidden md:flex"
-            style={{ gap: '2rem', alignItems: 'center' }}
-          >
-            {NAV_LINKS.map((link) => {
-              const id = link.href.replace('#', '')
-              const isActive = active === id
-              return (
-                <button
-                  key={link.href}
-                  onClick={() => handleNav(id)}
-                  className={cn('nav-link', isActive && 'active')}
-                >
-                  {link.label}
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-underline"
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        bottom: -10,
-                        height: 1,
-                        background: 'linear-gradient(90deg, transparent, var(--gold), transparent)',
-                      }}
-                    />
-                  )}
-                </button>
-              )
-            })}
-          </nav>
+          <DesktopNav active={active} handleNav={handleNav} />
 
           {/* Mobile hamburger */}
           <button
@@ -223,51 +200,7 @@ export default function Navbar() {
                 />
               </div>
 
-              <div style={{ padding: '8px 0 24px' }}>
-                {NAV_LINKS.map((link, i) => {
-                  const id = link.href.replace('#', '')
-                  const isActive = active === id
-                  return (
-                    <motion.button
-                      key={link.href}
-                      initial={{ opacity: 0, x: -16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.06 + 0.1 }}
-                      onClick={() => handleNav(id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        width: '100%',
-                        padding: '16px 28px',
-                        background: 'none',
-                        border: 'none',
-                        borderBottom: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        color: isActive ? 'var(--gold-light)' : 'var(--ivory-dim)',
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '0.9rem',
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        gap: 12,
-                      }}
-                    >
-                      {isActive && (
-                        <span
-                          style={{
-                            width: 3,
-                            height: 18,
-                            borderRadius: 9999,
-                            background: 'linear-gradient(180deg, var(--gold-light), var(--gold))',
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      {link.label}
-                    </motion.button>
-                  )
-                })}
-              </div>
+            <MobileNav active={active} handleNav={handleNav} />
 
               <div style={{ padding: '4px 28px 8px', textAlign: 'center' }}>
                 <HalalBadge size="sm" />
