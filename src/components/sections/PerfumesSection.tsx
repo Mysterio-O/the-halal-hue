@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import SectionHeading from '../ui/SectionHeading';
-import PriceTicker from '../perfume/PriceTicker';
 import PerfumeGrid from '../perfume/PerfumeGrid';
 import { getFeaturedProducts } from '@/lib/queries/products';
 
