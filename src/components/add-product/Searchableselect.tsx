@@ -24,6 +24,7 @@ type AddField = {
     label: string
     required?: boolean
     type?: 'input' | 'textarea' | 'select'
+    inputType?: React.HTMLInputTypeAttribute
     placeholder?: string
     options?: { value: string; label: string }[]
 }
@@ -73,8 +74,8 @@ export function SearchableSelect({
                     <Popover open={open} onOpenChange={setOpen}>
                         {/* flex:1 + minWidth:0 makes the trigger fill available space */}
                         <PopoverTrigger style={{ flex: 1, minWidth: 0 }}>
-                            <button
-                                type="button"
+                            <div
+                                // type="button"
                                 style={{
                                     width: '100%',
                                     minWidth: 0,
@@ -110,7 +111,7 @@ export function SearchableSelect({
                                     ) : placeholder}
                                 </span>
                                 <ChevronsUpDown size={14} color="var(--ivory-dim)" style={{ flexShrink: 0 }} />
-                            </button>
+                            </div>
                         </PopoverTrigger>
 
                         <PopoverContent
@@ -273,6 +274,7 @@ export function SearchableSelect({
                                 </div>
                             ) : (
                                 <Input
+                                    type={field.inputType ?? 'text'}
                                     placeholder={field.placeholder}
                                     value={formData[field.key] ?? ''}
                                     onChange={e => setFormData(p => ({ ...p, [field.key]: e.target.value }))}

@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { FieldLabel, Input, Textarea, StatusSelect, Section, Toast } from './ui'
 
@@ -34,7 +34,9 @@ type ExistingPhoto = {
 export default function AddProducts() {
     const searchParams = useSearchParams()
     const productId = searchParams.get('id')
-    const isEdit = !!productId
+    const isEdit = !!productId;
+
+    const router = useRouter();
 
     const [form, setForm] = useState<ProductForm>(INITIAL_FORM)
     const [images, setImages] = useState<ImageFile[]>([])
@@ -61,7 +63,7 @@ export default function AddProducts() {
             .eq('cat_status', 'ACTIVE')
             .then(({ data }) => setCategories(data ?? []))
 
-        supabase.from('offers').select('id, off_name, off_discount_percentage, description')
+        supabase.from('offers').select('id, off_name, off_discount_percentage, description, off_ends, off_status')
             .eq('off_status', 'ACTIVE')
             .then(({ data }) => setOffers(data ?? []))
     }, [])
@@ -161,19 +163,28 @@ export default function AddProducts() {
     }
 
     const handleCreateOffer = async (data: Record<string, string>) => {
+        const parsedDiscount = Number.parseInt(data.off_discount_percentage, 10)
+        const discount = Number.isFinite(parsedDiscount) ? parsedDiscount : 0
+
         const { data: created, error } = await supabase
             .from('offers')
             .insert({
-                off_name: data.off_name,
-                description: data.description || null,
-                off_discount_percentage: parseInt(data.off_discount_percentage) || 0,
-                off_status: 'ACTIVE',
+                off_name: data.off_name.trim(),
+                description: data.description?.trim() || null,
+                off_discount_percentage: discount,
+                off_ends: data.off_ends ? new Date(data.off_ends).toISOString() : null,
+                off_status: data.off_status || 'ACTIVE',
             })
-            .select('id, off_name, off_discount_percentage')
+            .select('id, off_name, off_discount_percentage, off_ends, off_status')
             .single()
         if (error) throw new Error(error.message)
         setOffers(prev => [...prev, created])
-        return { id: created.id, label: created.off_name, sub: `${created.off_discount_percentage}% off` }
+        const statusLabel = created.off_status ? ` · ${created.off_status}` : ''
+        return {
+            id: created.id,
+            label: created.off_name,
+            sub: `${created.off_discount_percentage}% off${statusLabel}`,
+        }
     }
 
     // ─── Submit: create or update ─────────────────────────────────────────────
@@ -299,6 +310,7 @@ export default function AddProducts() {
                 setForm(INITIAL_FORM)
                 setTiers([{ id: uid(), price: '', quantity: '' }])
                 setImages([])
+                router.push('/admin/products') // Redirect to product list after creation
             }
         } catch (err) {
             showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')
@@ -438,7 +450,7 @@ export default function AddProducts() {
                                 options={offers.map(o => ({
                                     id: o.id,
                                     label: o.off_name,
-                                    sub: `${o.off_discount_percentage}% off`,
+                                    sub: `${o.off_discount_percentage}% off${o.off_ends ? ` · ends ${new Date(o.off_ends).toLocaleDateString('en-BD')}` : ''}`,
                                 }))}
                                 placeholder="No offer (optional)…"
                                 addLabel="New Offer"
@@ -446,6 +458,16 @@ export default function AddProducts() {
                                 addFields={[
                                     { key: 'off_name', label: 'Offer Name', required: true, placeholder: 'e.g. Eid Special' },
                                     { key: 'off_discount_percentage', label: 'Discount %', required: true, placeholder: '10' },
+                                    { key: 'off_ends', label: 'Expiry Date & Time', inputType: 'datetime-local', placeholder: 'Optional expiry' },
+                                    {
+                                        key: 'off_status',
+                                        label: 'Status',
+                                        type: 'select',
+                                        options: [
+                                            { value: 'ACTIVE', label: 'Active' },
+                                            { value: 'INACTIVE', label: 'Inactive' },
+                                        ],
+                                    },
                                     { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional…' },
                                 ]}
                             />
