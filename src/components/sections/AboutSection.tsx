@@ -49,8 +49,8 @@ function StatCard({ value, label, delay }: StatCardProps) {
 
 const STATS: StatCardProps[] = [
   { value: '100%', label: 'Halal Certified', delay: 0 },
-  { value: '30s', label: 'Price Refresh', delay: 0.08 },
-  { value: '50+', label: 'Fragrances', delay: 0.16 },
+  { value: 'Yes', label: 'Home Delivery?', delay: 0.08 },
+  { value: '10+', label: 'Fragrances', delay: 0.16 },
   { value: '5★', label: 'Customer Rating', delay: 0.24 },
 ]
 

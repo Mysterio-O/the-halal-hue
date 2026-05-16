@@ -228,6 +228,25 @@ export default function Footer() {
             Luxury · Verified · Halal
           </span>
         </div>
+
+        <div
+          style={{
+            color: 'var(--gold-muted)',
+            fontSize: '0.78rem',
+            fontFamily: 'var(--font-body)',
+            textAlign: 'center',
+            marginTop: '0.5rem',
+          }}
+        >
+          Developed by <a
+            href="https://mysterio-verse.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--gold-light)', textDecoration: 'underline' }}
+          >
+            Mysterio
+          </a>
+        </div>
       </div>
     </footer>
   )

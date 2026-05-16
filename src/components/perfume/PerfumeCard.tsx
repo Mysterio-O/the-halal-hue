@@ -71,16 +71,21 @@ export default function PerfumeCard({ product }: PerfumeCardProps) {
         )}
 
         {/* Halal badge — top-right */}
-        <span
-          className="badge-halal absolute top-1.5 right-1.5 z-10"
-          style={{ fontSize: '0.55rem', padding: '2px 7px' }}
-        >
-          ✦ Halal
-        </span>
+        {
+          !product.isOnOffer && !product.offers?.off_discount_percentage && (
+            <span
+              className="badge-halal absolute top-1.5 left-1.5 z-10"
+              style={{ fontSize: '0.55rem', padding: '2px 7px' }}
+            >
+              ✦ Halal
+            </span>
+          )
+        }
+
       </Link>
 
       {/* ── Body ── */}
-      <div className="flex flex-col gap-1 p-2 flex-1 w-full min-w-0" style={{paddingLeft:'10px', paddingRight:'10px', paddingBottom:'12px'}}>
+      <div className="flex flex-col gap-1 p-2 flex-1 w-full min-w-0" style={{ paddingLeft: '10px', paddingRight: '10px', paddingBottom: '12px' }}>
 
         {/* Category */}
         {product.categories && (

@@ -1,9 +1,9 @@
 "use client"
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import Image from 'next/image'
 import useScrollSpy from '../../hooks/useScrollSpy'
 import useSmoothScroll from '../../hooks/useSmoothScroll'
-import { BRAND_NAME, NAV_LINKS } from '../../lib/constants'
 import HalalBadge from '../ui/HalalBadge'
 import DesktopNav from './ControlledNav/DesktopNav'
 import { useRouter } from 'next/navigation'
@@ -89,6 +89,7 @@ export default function Navbar() {
           {/* Brand */}
           <button
             onClick={() => handleNav('home')}
+            aria-label="The Halal Hue home"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -99,16 +100,17 @@ export default function Navbar() {
               padding: 0,
             }}
           >
-            <span
+            <Image
+              src="/assets/logo.webp"
+              alt="The Halal Hue"
+              width={292}
+              height={86}
+              priority
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '1.05rem',
-                letterSpacing: '0.06em',
-                color: 'var(--gold)',
+                width: 'auto',
+                height: '56px',
               }}
-            >
-              {BRAND_NAME}
-            </span>
+            />
             <span className="hidden sm:inline-flex">
               <HalalBadge size="sm" />
             </span>

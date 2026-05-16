@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createBrowserClient } from '@supabase/ssr'
 import { Pencil, Plus, Power, Trash2 } from 'lucide-react'
-import { FieldLabel, Input, Modal, Textarea, Toast } from '@/components/add-product/ui'
+import { FieldLabel, Input, Modal, StatusSelect, Textarea, Toast } from '@/components/add-product/ui'
 
 type OfferStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED'
 
@@ -295,10 +295,10 @@ export default function OffersManagerClient() {
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--obsidian)', paddingTop: 'var(--nav-height)' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--obsidian)' }}>
             <Toast toast={toast} />
 
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8" style={{ display: 'grid', gap: 22 }}>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8" style={{ display: 'grid', gap: 22 , padding:'10px'}}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <div>
                         <Link
@@ -658,24 +658,10 @@ export default function OffersManagerClient() {
 
                     <div>
                         <FieldLabel>Status</FieldLabel>
-                        <select
+                        <StatusSelect
                             value={form.off_status}
-                            onChange={(e) => setForm((prev) => ({ ...prev, off_status: e.target.value as OfferStatus }))}
-                            style={{
-                                width: '100%',
-                                padding: '11px 12px',
-                                borderRadius: 10,
-                                border: '1.5px solid var(--border)',
-                                background: 'rgba(255,255,255,0.04)',
-                                color: 'var(--ivory)',
-                                fontSize: 14,
-                                outline: 'none',
-                            }}
-                        >
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                            <option value="EXPIRED">Expired</option>
-                        </select>
+                            onChange={(v) => setForm((prev) => ({ ...prev, off_status: v as OfferStatus }))}
+                        />
                     </div>
 
                     <div>
