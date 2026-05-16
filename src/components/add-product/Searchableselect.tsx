@@ -24,6 +24,7 @@ type AddField = {
     label: string
     required?: boolean
     type?: 'input' | 'textarea' | 'select'
+    inputType?: React.HTMLInputTypeAttribute
     placeholder?: string
     options?: { value: string; label: string }[]
 }
@@ -273,6 +274,7 @@ export function SearchableSelect({
                                 </div>
                             ) : (
                                 <Input
+                                    type={field.inputType ?? 'text'}
                                     placeholder={field.placeholder}
                                     value={formData[field.key] ?? ''}
                                     onChange={e => setFormData(p => ({ ...p, [field.key]: e.target.value }))}

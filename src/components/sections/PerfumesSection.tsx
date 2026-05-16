@@ -23,24 +23,28 @@ export default async function PerfumesSection() {
             className="w-2 h-2 rounded-full bg-[var(--price-up)]"
             style={{ animation: 'pulse-dot 1.5s ease-in-out infinite' }}
           />
-          <p className="italic text-sm" style={{ color: 'var(--gold-muted)' }}>
+          <p className="italic text-sm" style={{ color: 'var(--gold-muted)', marginTop: '0.4rem' }}>
             {products.length > 0
               ? `Showing ${products.length} featured fragrances`
               : 'No products available'}
           </p>
         </div>
 
-        <div className="mt-8">
+        <div style={{marginTop: '2rem', padding:'1rem'}}>
           <PerfumeGrid products={products} />
         </div>
 
         {/* ── View All button ── */}
-        <div className="mt-10 flex justify-center" style={{marginTop:'20px'}}>
-          <Link href="/products" className="btn-gold">
-            <span>View All Fragrances</span>
-            <span style={{ fontSize: '0.9em' }}>→</span>
-          </Link>
-        </div>
+        {
+          products.length > 0 && (
+            <div className="mt-10 flex justify-center" style={{ marginTop: '20px', paddingBottom: '10px' }}>
+              <Link href="/products" className="btn-gold">
+                <span>View All Fragrances</span>
+                <span style={{ fontSize: '0.9em' }}>→</span>
+              </Link>
+            </div>
+          )
+        }
       </div>
     </section>
   );

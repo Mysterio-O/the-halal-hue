@@ -62,6 +62,7 @@ export default async function OffersSection() {
                             fontSize: 'clamp(1.4rem, 3.5vw, 2rem)',
                             letterSpacing: '0.06em',
                             lineHeight: 1.2,
+                            textAlign: 'center',
                         }}
                     >
                         Exclusive Offers
@@ -73,6 +74,7 @@ export default async function OffersSection() {
                             fontSize: '0.9rem',
                             color: 'var(--ivory-dim)',
                             marginTop: '0.4rem',
+                            textAlign: 'center',
                         }}
                     >
                         Save more on our finest halal fragrances — for a limited time.
@@ -114,6 +116,7 @@ export default async function OffersSection() {
                             textTransform: 'uppercase',
                             color: 'var(--gold-muted)',
                             opacity: 0.6,
+                            marginLeft: '0.5rem',
                         }}
                     >
                         {offers.length} active offer{offers.length !== 1 ? 's' : ''}
@@ -127,6 +130,7 @@ export default async function OffersSection() {
                             color: 'var(--gold-muted)',
                             opacity: 0.5,
                             textTransform: 'uppercase',
+                            marginRight: '0.5rem',
                         }}
                     >
                         Scroll to explore →

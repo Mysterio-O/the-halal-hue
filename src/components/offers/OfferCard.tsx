@@ -1,4 +1,6 @@
 import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { OfferWithCount } from '@/lib/queries/offers';
 
 interface Props {
@@ -9,11 +11,9 @@ export default function OfferCard({ offer }: Props) {
     const expiryLabel = offer.expiryLabel ?? null;
     const isExpiringSoon = offer.isExpiringSoon ?? false;
 
-    console.log(offer)
-
     return (
         <div
-            className="group flex-shrink-0 relative overflow-hidden"
+            className="group shrink-0 relative overflow-hidden"
             style={{
                 width: 'clamp(260px, 72vw, 320px)',
                 borderRadius: 'var(--card-radius)',
@@ -127,6 +127,111 @@ export default function OfferCard({ offer }: Props) {
                         margin: '0.75rem 0',
                     }}
                 />
+
+                {/* Products in this offer */}
+                {offer.products.length > 0 && (
+                    <div style={{ display: 'grid', gap: 8, marginBottom: '0.95rem' }}>
+                        {offer.products.map((product) => (
+                            <article
+                                key={product.id}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '44px 1fr auto',
+                                    gap: 8,
+                                    alignItems: 'center',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 10,
+                                    background: 'rgba(255,255,255,0.03)',
+                                    padding: 6,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        position: 'relative',
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: 8,
+                                        overflow: 'hidden',
+                                        background: 'rgba(61,10,10,0.8)',
+                                    }}
+                                >
+                                    {product.primaryPhotoUrl ? (
+                                        <Image
+                                            src={product.primaryPhotoUrl}
+                                            alt={product.pr_name}
+                                            fill
+                                            sizes="44px"
+                                            style={{ objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                display: 'grid',
+                                                placeItems: 'center',
+                                                fontFamily: 'var(--font-display)',
+                                                color: 'var(--gold-muted)',
+                                                fontSize: '0.72rem',
+                                            }}
+                                        >
+                                            ✦
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div style={{ minWidth: 0 }}>
+                                    <p
+                                        style={{
+                                            margin: 0,
+                                            fontFamily: 'var(--font-display)',
+                                            fontSize: '0.72rem',
+                                            color: 'var(--ivory)',
+                                            lineHeight: 1.2,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {product.pr_name}
+                                    </p>
+                                    {product.lowestPrice !== null && (
+                                        <p
+                                            style={{
+                                                margin: '0.2rem 0 0',
+                                                fontFamily: 'var(--font-display)',
+                                                fontSize: '0.67rem',
+                                                letterSpacing: '0.04em',
+                                                color: 'var(--gold-light)',
+                                            }}
+                                        >
+                                            from ৳{product.lowestPrice.toFixed(0)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <Link
+                                    href={`/perfumes/${product.id}`}
+                                    style={{
+                                        borderRadius: 9999,
+                                        border: '1px solid var(--border-strong)',
+                                        color: 'var(--gold-light)',
+                                        fontFamily: 'var(--font-display)',
+                                        fontSize: '0.58rem',
+                                        letterSpacing: '0.08em',
+                                        textTransform: 'uppercase',
+                                        textDecoration: 'none',
+                                        padding: '6px 9px',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    View Details
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
+                )}
 
                 {/* Footer: product count only — no CTA */}
                 <div className="flex items-center justify-between">

@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { getProducts } from '@/lib/queries/products';
 import { getActiveCategories } from '@/lib/queries/categories';
 import PerfumeGrid from '@/components/perfume/PerfumeGrid';
@@ -12,9 +13,39 @@ interface Props {
   searchParams: Promise<{ page?: string; cat?: string }>;
 }
 
-export const metadata = {
-  title: 'All Fragrances | The Halal Hue',
-  description: 'Browse our full collection of authentic halal perfumes.',
+export const metadata: Metadata = {
+  title: 'All Fragrances',
+  description: 'Browse the full collection of authentic halal perfumes from The Halal Hue with transparent pricing and detailed notes.',
+  keywords: [
+    'all perfumes',
+    'halal perfume collection',
+    'attar bangladesh',
+    'luxury fragrance bangladesh',
+    'the halal hue products',
+  ],
+  alternates: {
+    canonical: '/products',
+  },
+  openGraph: {
+    type: 'website',
+    url: '/products',
+    title: 'All Fragrances | The Halal Hue',
+    description: 'Browse the full collection of authentic halal perfumes from The Halal Hue with transparent pricing and detailed notes.',
+    images: [
+      {
+        url: '/assets/logo.webp',
+        width: 1200,
+        height: 630,
+        alt: 'The Halal Hue perfume collection',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'All Fragrances | The Halal Hue',
+    description: 'Browse the full collection of authentic halal perfumes from The Halal Hue with transparent pricing and detailed notes.',
+    images: ['/assets/logo.webp'],
+  },
 };
 
 export default async function ProductsPage({ searchParams }: Props) {

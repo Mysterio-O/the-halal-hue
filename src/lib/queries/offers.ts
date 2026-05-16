@@ -1,5 +1,13 @@
 import { createServerSupabase } from '@/utils/supabase/server';
 
+export interface OfferProductSummary {
+    id: string;
+    pr_name: string;
+    off_id: string | null;
+    primaryPhotoUrl: string | null;
+    lowestPrice: number | null;
+}
+
 export interface OfferWithCount {
     id: string;
     off_name: string;
@@ -11,6 +19,7 @@ export interface OfferWithCount {
     productCount: number;
     expiryLabel?: string | null;
     isExpiringSoon?: boolean;
+    products: OfferProductSummary[];
 }
 
 function getExpiryMeta(dateStr: string | null): { label: string | null; isExpiringSoon: boolean } {
@@ -43,27 +52,77 @@ export async function getActiveOffers(): Promise<OfferWithCount[]> {
 
     if (!offers || offers.length === 0) return [];
 
-    // For each offer, count how many ACTIVE products reference it
-    const counts = await Promise.all(
-        offers.map(async (offer) => {
-            const { count } = await supabase
-                .from('products')
-                .select('id', { count: 'exact', head: true })
-                .eq('off_id', offer.id)
-                .eq('pr_status', 'ACTIVE');
-            return { id: offer.id, count: count ?? 0 };
-        })
-    );
+    const now = Date.now();
+    const activeOffers = offers.filter((offer) => {
+        if (!offer.off_ends) return true;
+        return new Date(offer.off_ends).getTime() >= now;
+    });
 
-    const countMap = Object.fromEntries(counts.map((c) => [c.id, c.count]));
+    if (activeOffers.length === 0) return [];
 
-    return offers.map((offer) => {
+    const offerIds = activeOffers.map((offer) => offer.id);
+
+    const { data: linkedProducts, error: productError } = await supabase
+        .from('products')
+        .select(`
+            id,
+            pr_name,
+            off_id,
+            price_lists ( price, quantity ),
+            product_photos ( photo_url, is_primary )
+        `)
+        .eq('pr_status', 'ACTIVE')
+        .in('off_id', offerIds)
+        .order('created_at', { ascending: false });
+
+    if (productError) {
+        console.error('[getActiveOffers:products]', productError.message);
+    }
+
+    const productsByOffer = new Map<string, OfferProductSummary[]>();
+
+    for (const rawProduct of linkedProducts ?? []) {
+        if (!rawProduct.off_id) continue;
+
+        const photos = Array.isArray(rawProduct.product_photos)
+            ? rawProduct.product_photos
+            : [];
+
+        const primaryPhoto =
+            photos.find((photo) => photo.is_primary) ??
+            photos[0] ??
+            null;
+
+        const prices = Array.isArray(rawProduct.price_lists)
+            ? rawProduct.price_lists
+            : [];
+
+        const lowestPrice = prices.length
+            ? Math.min(...prices.map((priceRow) => Number(priceRow.price)))
+            : null;
+
+        const summary: OfferProductSummary = {
+            id: rawProduct.id,
+            pr_name: rawProduct.pr_name,
+            off_id: rawProduct.off_id,
+            primaryPhotoUrl: primaryPhoto?.photo_url ?? null,
+            lowestPrice,
+        };
+
+        const prev = productsByOffer.get(rawProduct.off_id) ?? [];
+        prev.push(summary);
+        productsByOffer.set(rawProduct.off_id, prev);
+    }
+
+    return activeOffers.map((offer) => {
+        const relatedProducts = productsByOffer.get(offer.id) ?? [];
         const expiryMeta = getExpiryMeta(offer.off_ends);
         return {
             ...offer,
-            productCount: countMap[offer.id] ?? 0,
+            productCount: relatedProducts.length,
             expiryLabel: expiryMeta.label,
             isExpiringSoon: expiryMeta.isExpiringSoon,
+            products: relatedProducts.slice(0, 4),
         };
     });
 }

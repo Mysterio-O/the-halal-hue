@@ -76,7 +76,7 @@ export default function ProductDetailClient({ product }: Props) {
                     }
                     .image-inner {
                         position: relative;
-                        border-radius: 21px;
+                        // border-radius: 21px;
                         overflow: hidden;
                         background: rgba(255,255,255,0.03);
                         aspect-ratio: 3 / 4;
