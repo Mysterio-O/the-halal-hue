@@ -1,12 +1,15 @@
 'use client'
 import React, { useState } from 'react'
 import { createClient as createBrowserSupabase } from '@/utils/supabase/client';
+import { Eye, EyeClosed } from 'lucide-react';
 
 export default function LoginPageClient() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [showPassword, setShowPassword] = useState(false);
 
 
 
@@ -54,14 +57,39 @@ export default function LoginPageClient() {
 
                     <label style={{ display: 'grid', gap: 6 }}>
                         <span style={{ color: 'var(--ivory-dim)', fontSize: 12 }}>Password</span>
-                        <input
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            type="password"
-                            placeholder="••••••••"
-                            style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--ivory)' }}
-                        />
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <input
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 42px 12px 14px', // ← right padding makes room for icon
+                                    borderRadius: 10,
+                                    border: '1px solid var(--border)',
+                                    background: 'transparent',
+                                    color: 'var(--ivory)',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                            <span
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: 14,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                }}
+                            >
+                                {showPassword
+                                    ? <Eye size={18} color="var(--ivory-dim)" />
+                                    : <EyeClosed size={18} color="var(--ivory-dim)" />
+                                }
+                            </span>
+                        </div>
                     </label>
 
                     {error && <div style={{ color: 'var(--price-down)', fontSize: 13 }}>{error}</div>}

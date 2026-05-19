@@ -48,6 +48,7 @@ export default function AddProducts() {
     const [submitting, setSubmitting] = useState(false)
     const [loadingProduct, setLoadingProduct] = useState(isEdit)
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+    const submittingLabel = isEdit ? 'Saving changes…' : 'Adding product…'
 
     const set = (field: keyof ProductForm, val: string) =>
         setForm(f => ({ ...f, [field]: val }))
@@ -369,6 +370,38 @@ export default function AddProducts() {
                     gap: 10px;
                     margin-bottom: 14px;
                 }
+                .submit-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 10050;
+                    display: grid;
+                    place-items: center;
+                    background: rgba(8, 4, 4, 0.78);
+                    backdrop-filter: blur(6px);
+                    padding: 16px;
+                }
+                .submit-card {
+                    width: min(320px, 90vw);
+                    background: rgba(14, 6, 6, 0.96);
+                    border: 1px solid var(--border);
+                    border-radius: 16px;
+                    padding: 18px 16px;
+                    display: grid;
+                    justify-items: center;
+                    gap: 10px;
+                    text-align: center;
+                    color: var(--ivory);
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+                }
+                .submit-spinner {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    border: 3px solid rgba(255,255,255,0.12);
+                    border-top-color: var(--gold);
+                    animation: submit-spin 0.8s linear infinite;
+                }
+                @keyframes submit-spin { to { transform: rotate(360deg); } }
                 @keyframes spin { to { transform: rotate(360deg); } }
                 @media (max-width: 500px) {
                     .add-product-wrapper { padding: 16px 12px 60px; }
@@ -378,6 +411,17 @@ export default function AddProducts() {
             `}</style>
 
             <div className="add-product-wrapper">
+                {submitting && (
+                    <div className="submit-overlay" role="status" aria-live="polite">
+                        <div className="submit-card">
+                            <div className="submit-spinner" />
+                            <div style={{ fontSize: 14, fontWeight: 600 }}>{submittingLabel}</div>
+                            <div style={{ fontSize: 12, color: 'var(--ivory-dim)' }}>
+                                Please keep this page open.
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Header */}
                 <div style={{ marginBottom: 28 }}>
                     <h1 style={{
@@ -394,7 +438,7 @@ export default function AddProducts() {
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
+                <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }} aria-busy={submitting}>
 
                     {/* Basic Info */}
                     <Section title="Basic Info">

@@ -4,6 +4,35 @@ import { ImagePlus, X, Star } from 'lucide-react'
 import type { ImageFile } from './types'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
+const heicExtension = /\.(heic|heif)$/i
+
+const isHeicFile = (file: File) => {
+    const type = file.type.toLowerCase()
+    return type === 'image/heic' || type === 'image/heif' || heicExtension.test(file.name)
+}
+
+const convertHeicToWebp = async (file: File) => {
+    const { default: heic2any } = await import('heic2any')
+    const result = await heic2any({ blob: file, toType: 'image/webp', quality: 0.9 })
+    const blob = Array.isArray(result) ? result[0] : result
+    const nextName = file.name.replace(heicExtension, '.webp')
+    return new File([blob], nextName, { type: 'image/webp', lastModified: file.lastModified })
+}
+
+const normalizeImageFile = async (file: File): Promise<File | null> => {
+    if (isHeicFile(file)) {
+        try {
+            return await convertHeicToWebp(file)
+        } catch (err) {
+            console.warn('Failed to convert HEIC image', err)
+            return null
+        }
+    }
+
+    if (file.type.startsWith('image/')) return file
+
+    return null
+}
 
 export function ImageZone({ images, onChange }: {
     images: ImageFile[]
@@ -12,15 +41,20 @@ export function ImageZone({ images, onChange }: {
     const inputRef = useRef<HTMLInputElement>(null)
     const [dragging, setDragging] = useState(false)
 
-    const addFiles = (files: FileList | null) => {
+    const addFiles = async (files: FileList | null) => {
         if (!files) return
-        const incoming: ImageFile[] = Array.from(files)
-            .filter(f => f.type.startsWith('image/'))
-            .map((file, i) => ({
-                id: uid(), file,
-                preview: URL.createObjectURL(file),
-                isPrimary: images.length === 0 && i === 0,
-            }))
+        const normalized = await Promise.all(
+            Array.from(files).map((file) => normalizeImageFile(file))
+        )
+        const validFiles = normalized.filter(Boolean) as File[]
+        if (!validFiles.length) return
+
+        const incoming: ImageFile[] = validFiles.map((file, i) => ({
+            id: uid(),
+            file,
+            preview: URL.createObjectURL(file),
+            isPrimary: images.length === 0 && i === 0,
+        }))
         onChange([...images, ...incoming])
     }
 
@@ -40,7 +74,7 @@ export function ImageZone({ images, onChange }: {
                 onClick={() => inputRef.current?.click()}
                 onDragOver={e => { e.preventDefault(); setDragging(true) }}
                 onDragLeave={() => setDragging(false)}
-                onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
+                onDrop={e => { e.preventDefault(); setDragging(false); void addFiles(e.dataTransfer.files) }}
                 style={{
                     border: `2px dashed ${dragging ? 'var(--gold)' : 'var(--border)'}`,
                     borderRadius: 12, padding: '32px 16px', textAlign: 'center', cursor: 'pointer',
@@ -61,11 +95,11 @@ export function ImageZone({ images, onChange }: {
                         Drop images here or <span style={{ color: 'var(--gold)' }}>browse</span>
                     </div>
                     <div style={{ color: 'var(--ivory-dim)', fontSize: 12, marginTop: 3 }}>
-                        PNG, JPG, WEBP · Multiple files supported
+                        PNG, JPG, WEBP, HEIC (auto-converted) · Multiple files supported
                     </div>
                 </div>
-                <input ref={inputRef} type="file" accept="image/*" multiple hidden
-                    onChange={e => addFiles(e.target.files)} />
+                <input ref={inputRef} type="file" accept="image/*,.heic,.heif" multiple hidden
+                    onChange={e => void addFiles(e.target.files)} />
             </div>
 
             {/* Thumbnails */}
